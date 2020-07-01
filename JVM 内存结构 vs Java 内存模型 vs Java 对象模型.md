@@ -133,16 +133,6 @@ hb("线程 X 对 volatile C 写入", "线程 Y 读取 volatile C")，这个是�
 根据这两点，可以推出：hb("线程 X 对 a,b 的写入", "线程 Y 读取 volatile C"）。
 ```
 
-
-
-
-
-
-
-
-
-
-
 ## volatile
 
 1. 是什么？
@@ -155,9 +145,36 @@ hb("线程 X 对 volatile C 写入", "线程 Y 读取 volatile C")，这个是�
 
 * 不适用：i++
 
-* 适用：
+* 适用：第一种场合，boolean flag，如果一个共享变量自始至终只被各个线程**赋值**，而没有其他操作，那么就可以使用 volatile 来代替 synchronized 或者 Atomic 变量，因为赋值操作本身就是原子性的，而 volatile 又可以保证可见性，因此就能保证线程安全。第二种场合，作为刷新之前变量的**触发器**，实现轻量级的同步。
+
+```java
+Map configOptions;
+char[] configText;
+volatile boolean initialized = false;
+
+// Thread A
+configOptions = new HashMap();
+configText = readConfigFile(fileName);
+processConfigOptions(configText, configOptions);
+initialized = true;
+
+// Thread B
+while (!initialized) {
+    sleep();
+    // use configOptions
+}
+```
 
 3. 作用：可见性、禁止重排序
 
+可见性：读取一个 volatile 变量前，需要先使相应的本地缓存失效，这样就必须到主内存中读取该变量的最新值；写一个 volatile 变量后会立即刷写到主内存中。
+
+禁止重排序：用于解决单例模式的经典问题：双重检验锁。
+
 4. volatile 和 synchronized 的关系？
 
+volatile 可以看作是轻量版的 synchronized。
+
+## synchronized
+
+synchronized 不仅保证了原子性，还保证了可见性。
