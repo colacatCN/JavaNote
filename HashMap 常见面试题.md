@@ -195,16 +195,21 @@ void createEntry(int hash, K key, V value, int bucketIndex) {
 
 1.8：当线程 A 已确定了落槽位发现没有其他元素，若此时让出 CPU 时间分片，而在该重新获得时间前，线程 B 也被分配到了同样的落槽位并提前将数据存了进去，那线程 A 持有的就是一个过期的落槽位，它并不会理会线程 B 的操作，直接粗暴地覆盖之前其他线程的记录，造成了数据丢失。
 ```java
-// putVal
+// putVal()
 if ((p = tab[i = (n - 1) & hash]) == null)
     tab[i] = newNode(hash, key, value, null);
 ```
 
 2. size 不准确
-成员变量 size 只是被 transient 关键字修饰（ 不参与序列化 ），也就是说，在各个线程工作内存中的 size 副本并不会及时同步到主内存中，因此导致 size 的值会不断地被覆盖。
+
+一方面，成员变量 size 只是被 transient 关键字修饰（ 不参与序列化 ），也就是说，在各个线程工作内存中的 size 副本并不会及时同步到主内存中，因此导致 size 的值会不断地被覆盖。另一方面，在 putVal() 方法中当存完数据后判断是否需要扩容，++size 由于是非原子性操作会导致相同的问题。
 ```java
 /**
  * The number of key-value mappings contained in this map.
  */
 transient int size;
+
+// putVal()
+if (++size > threshold)
+    resize();
 ```
