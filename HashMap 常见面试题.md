@@ -142,3 +142,69 @@ n - 1: 0001 1111
 还有一点重要的就是由于 TreeNode 的大小大约是普通 Node 的两倍，因此仅在单链表的长度超过 8 且 HashMap 整体包含的元素个数超过 64 时才会使用红黑树，同时 HashMap 中元素的分布情况遵循泊松分布，单链表的长度超过 8 的概率是非常非常小。
 
 ## HashMap 存在哪些线程不安全的问题？
+
+1. 数据丢失
+
+1.7：如果多个线程同时执行 resize，每个线程又都会 new Entry[newCapacity]，这是线程内的局部数组实例，线程之间是不可见的。当迁移完成后，执行 resize 的线程会将该数组实例赋值给**共享变量 table**，从而覆盖其他线程之前的操作，因此在“新表”中插入的数据都会被无情地抛弃。
+```java
+void resize(int newCapacity) {
+    Entry[] oldTable = table;
+    int oldCapacity = oldTable.length;         
+    if (oldCapacity == MAXIMUM_CAPACITY) {
+        threshold = Integer.MAX_VALUE;
+       return;
+    }
+
+    Entry[] newTable = new Entry[newCapacity];
+    transfer(newTable);
+    table = newTable;
+    threshold = (int)(newCapacity * loadFactor);
+}
+
+void transfer(Entry[] newTable)
+{
+    Entry[] src = table;
+    int newCapacity = newTable.length;
+    for (int j = 0; j < src.length; j++) {
+        Entry<K,V> e = src[j];
+        if (e != null) {
+            src[j] = null;
+            do {
+                Entry<K,V> next = e.next;
+                int i = indexFor(e.hash, newCapacity);
+                e.next = newTable[i];
+                newTable[i] = e;
+                e = next;
+            } while (e != null);
+        }
+    }
+}
+```
+HashMap 1.7 由于并发扩容引起的线程安全问题大致可以总结为以下两种：
+* 已遍历区间新增元素会丢失（ 线程 A 在对旧表进行扩容时，线程 B 同时还在往旧表中写入数据 ）
+* “新表”被覆盖（ 线程 A 和 B 同时对旧表进行扩容，线程 A 稍微提前了一内内先完成了然后快乐地在新表中写入数据，过了一会儿线程 B 也完成了扩容并将它的“新表”赋值给了 table，导致线程 A 的努力都白费了 ）
+
+由于并发插入引起的线程安全问题：在 createEntry() 方法中会将新添加的元素直接放在 slot 槽位上（ 头插法 ），使新添加的元素在下次提取时可以被更快地访问。如果两个线程同时执行到 Entry<K, V> e = table[bucketIndex] 时，那么前一个线程的赋值就会被另一个覆盖掉。
+```java
+void createEntry(int hash, K key, V value, int bucketIndex) {
+    Entry<K, V> e = table[bucketIndex];
+    table[bucketIndex] = new Entry<>(hash, key, value, e);
+    size++;
+}
+```
+
+1.8：当线程 A 已确定了落槽位发现没有其他元素，若此时让出 CPU 时间分片，而在该重新获得时间前，线程 B 也被分配到了同样的落槽位并提前将数据存了进去，那线程 A 持有的就是一个过期的落槽位，它并不会理会线程 B 的操作，直接粗暴地覆盖之前其他线程的记录，造成了数据丢失。
+```java
+// putVal
+if ((p = tab[i = (n - 1) & hash]) == null)
+    tab[i] = newNode(hash, key, value, null);
+```
+
+2. size 不准确
+成员变量 size 只是被 transient 关键字修饰（ 不参与序列化 ），也就是说，在各个线程工作内存中的 size 副本并不会及时同步到主内存中，因此导致 size 的值会不断地被覆盖。
+```java
+/**
+ * The number of key-value mappings contained in this map.
+ */
+transient int size;
+```
