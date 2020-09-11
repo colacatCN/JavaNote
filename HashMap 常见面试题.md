@@ -213,3 +213,57 @@ transient int size;
 if (++size > threshold)
     resize();
 ```
+
+## HashMap 的 put 流程和 get 流程
+
+### put 流程
+
+Step 1：如果 table 为空或者 table 的长度为 0，初始化 table（ resize() ）默认长度为 16，扩容阈值为 12。
+```java
+if ((tab = table) == null || (n = tab.length) == 0)
+    n = (tab = resize()).length;
+```
+
+Step 2：计算待插入元素的落槽位 i，如果 table[i] 为空，则将该元素插入落槽位。
+```java
+if ((p = tab[i = (n - 1) & hash]) == null)
+    tab[i] = newNode(hash, key, value, null);
+```
+
+Step3：如果 table[i] 不为空
+
+3.1 判断待插入元素的 hash 值是否和槽位内的元素相同，如果相同，则用 newValue 覆盖 oldValue，并返回 oldValue；如果不相同，跳转至 3.2；
+```java
+if (p.hash == hash &&
+    ((k = p.key) == key || (key != null && key.equals(k))))
+    e = p;
+```
+    
+3.2 如果槽位内的元素属于 TreeNode 类型，则交由 putTreeVal() 方法处理；
+```java
+else if (p instanceof TreeNode)
+    e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+```
+    
+3.3 如果槽位内的元素属于普通的 Node 类型，则遍历链表，同时利用 binCount 变量统计当前链表的长度。在遍历时如果链表中的元素和待插入元素的 hash 值相同，则用 newValue 覆盖 oldValue，并返     回 oldValue；否则将会遍历到链表末尾，创建一个新的 Node 节点用于存放数据，并判断当前链表的长度是否满足树化的条件；
+```java
+for (int binCount = 0; ; ++binCount) {
+    if ((e = p.next) == null) {
+        p.next = newNode(hash, key, value, null);
+        if (binCount >= TREEIFY_THRESHOLD - 1)
+            treeifyBin(tab, hash);
+        break;
+    }
+    if (e.hash == hash &&
+        ((k = e.key) == key || (key != null && key.equals(k))))
+        break;
+    p = e;
+}
+```
+
+Step4：操作统计 + 1，并判断插入元素后是否满足扩容的条件。
+```java
+++modCount;
+if (++size > threshold)
+    resize();
+```
