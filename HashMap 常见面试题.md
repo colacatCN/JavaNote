@@ -214,7 +214,7 @@ if (++size > threshold)
     resize();
 ```
 
-## HashMap 的 put、get、resize 流程分析
+## HashMap 的 put 和 resize 流程分析
 
 ### put 流程
 
@@ -266,4 +266,85 @@ Step4：操作统计 + 1，并判断插入元素后是否满足扩容的条件�
 ++modCount;
 if (++size > threshold)
     resize();
+```
+
+### resize 流程
+
+Step1：根据当前的实际情况初始化变量 newCap 和 newThr，创建 newTab；
+如果调用构造方法时手工指定了初始容量，那么经过 tableSizeFor() 方法处理后得到的 newCap 的值是一个大于初始容量且最近的 2 的整数次幂的数（ 至于为什么是 2 的整数次幂请翻到第一道面试题 ），同时 threshold 的值就等于 newCap * loadFactor；
+如果此时 oldTab 中已经包含有元素了，那么将 newTab 扩容至 oldTab 的两倍的同时，也将 threshold 也扩大两倍。
+```java
+Node<K,V>[] oldTab = table;
+int oldCap = (oldTab == null) ? 0 : oldTab.length;
+int oldThr = threshold;
+int newCap, newThr = 0;
+if (oldCap > 0) {
+    if (oldCap >= MAXIMUM_CAPACITY) {
+        threshold = Integer.MAX_VALUE;
+        return oldTab;
+    }
+    else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
+             oldCap >= DEFAULT_INITIAL_CAPACITY)
+        newThr = oldThr << 1; // double threshold
+}
+else if (oldThr > 0) // initial capacity was placed in threshold
+    newCap = oldThr;
+else {               // zero initial threshold signifies using defaults
+    newCap = DEFAULT_INITIAL_CAPACITY;
+    newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
+}
+if (newThr == 0) {
+    float ft = (float)newCap * loadFactor;
+    newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
+              (int)ft : Integer.MAX_VALUE);
+}
+threshold = newThr;
+Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+```
+
+Step2：不同于 HashMap 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中。
+```java
+table = newTab;
+if (oldTab != null) {
+    for (int j = 0; j < oldCap; ++j) {
+        Node<K,V> e;
+        if ((e = oldTab[j]) != null) {
+            oldTab[j] = null;
+            if (e.next == null)
+                newTab[e.hash & (newCap - 1)] = e;
+            else if (e instanceof TreeNode)
+                ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
+            else { // preserve order
+                Node<K,V> loHead = null, loTail = null;
+                Node<K,V> hiHead = null, hiTail = null;
+                Node<K,V> next;
+                do {
+                    next = e.next;
+                    if ((e.hash & oldCap) == 0) {
+                        if (loTail == null)
+                            loHead = e;
+                        else
+                            loTail.next = e;
+                        loTail = e;
+                    }
+                    else {
+                        if (hiTail == null)
+                            hiHead = e;
+                        else
+                            hiTail.next = e;
+                        hiTail = e;
+                    }
+                } while ((e = next) != null);
+                if (loTail != null) {
+                    loTail.next = null;
+                    newTab[j] = loHead;
+                }
+                if (hiTail != null) {
+                    hiTail.next = null;
+                    newTab[j + oldCap] = hiHead;
+                }
+            }
+        }
+    }
+}
 ```
