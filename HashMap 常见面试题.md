@@ -143,7 +143,7 @@ n - 1: 0001 1111
 
 ## HashMap 存在哪些线程不安全的问题？
 
-1. 数据丢失
+**1. 数据丢失**
 
 1.7：如果多个线程同时执行 resize，每个线程又都会 new Entry[newCapacity]，这是线程内的局部数组实例，线程之间是不可见的。当迁移完成后，执行 resize 的线程会将该数组实例赋值给**共享变量 table**，从而覆盖其他线程之前的操作，因此在“新表”中插入的数据都会被无情地抛弃。
 ```java
@@ -200,7 +200,7 @@ if ((p = tab[i = (n - 1) & hash]) == null)
     tab[i] = newNode(hash, key, value, null);
 ```
 
-2. size 不准确
+**2. size 不准确**
 
 一方面，成员变量 size 只是被 transient 关键字修饰（ 不参与序列化 ），也就是说，在各个线程工作内存中的 size 副本并不会及时同步到主内存中，因此导致 size 的值会不断地被覆盖。另一方面，在 putVal() 方法中当存完数据后判断是否需要扩容，++size 由于是非原子性操作会导致相同的问题。
 ```java
@@ -271,8 +271,7 @@ if (++size > threshold)
 ### resize 流程
 
 Step1：根据当前的实际情况初始化变量 newCap 和 newThr，创建 newTab；
-如果调用构造方法时手工指定了初始容量，那么经过 tableSizeFor() 方法处理后得到的 newCap 的值是一个大于初始容量且最近的 2 的整数次幂的数（ 至于为什么是 2 的整数次幂请翻到第一道面试题 ），同时 threshold 的值就等于 newCap * loadFactor；
-如果此时 oldTab 中已经包含有元素了，那么将 newTab 扩容至 oldTab 的两倍的同时，也将 threshold 也扩大两倍。
+如果调用构造方法时手工指定了初始容量，那么经过 tableSizeFor() 方法处理后得到的 newCap 的值是一个大于初始容量且最近的 2 的整数次幂的数（ 至于为什么是 2 的整数次幂请翻到第一道面试题 ），同时 threshold 的值就等于 newCap * loadFactor；如果此时 oldTab 中已经包含有元素了，那么将 newTab 扩容至 oldTab 的两倍的同时，也将 threshold 也扩大两倍。
 ```java
 Node<K,V>[] oldTab = table;
 int oldCap = (oldTab == null) ? 0 : oldTab.length;
@@ -302,20 +301,20 @@ threshold = newThr;
 Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
 ```
 
-Step2：不同于 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中。
-接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ 详情请见 1.7 和 1.8 的不同点这道面试题 ）。
+Step2：不同于 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中（ **@1** ）。
+接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位（ **@2** ）；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ **@3：e.hash & oldCap**，详情请见 1.7 和 1.8 的不同点这道面试题 ）。
 ```java
-table = newTab;
+table = newTab; // @1
 if (oldTab != null) {
     for (int j = 0; j < oldCap; ++j) {
         Node<K,V> e;
         if ((e = oldTab[j]) != null) {
             oldTab[j] = null;
             if (e.next == null)
-                newTab[e.hash & (newCap - 1)] = e;
+                newTab[e.hash & (newCap - 1)] = e; // @2
             else if (e instanceof TreeNode)
                 ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
-            else { // preserve order
+            else { // @3
                 Node<K,V> loHead = null, loTail = null;
                 Node<K,V> hiHead = null, hiTail = null;
                 Node<K,V> next;
