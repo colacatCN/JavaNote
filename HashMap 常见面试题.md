@@ -180,11 +180,11 @@ void transfer(Entry[] newTable)
     }
 }
 ```
-HashMap 1.7 由于并发扩容引起的线程安全问题大致可以总结为以下两种：
+HashMap 1.7 由于**并发扩容**引起的线程安全问题大致可以总结为以下两种：
 * 已遍历区间新增元素会丢失（ 线程 A 在对旧表进行扩容时，线程 B 同时还在往旧表中写入数据 ）
 * “新表”被覆盖（ 线程 A 和 B 同时对旧表进行扩容，线程 A 稍微提前了一内内先完成了然后快乐地在新表中写入数据，过了一会儿线程 B 也完成了扩容并将它的“新表”赋值给了 table，导致线程 A 的努力都白费了 ）
 
-由于并发插入引起的线程安全问题：在 createEntry() 方法中会将新添加的元素直接放在 slot 槽位上（ 头插法 ），使新添加的元素在下次提取时可以被更快地访问。如果两个线程同时执行到 Entry<K, V> e = table[bucketIndex] 时，那么前一个线程的赋值就会被另一个覆盖掉。
+由于**并发插入**引起的线程安全问题：在 createEntry() 方法中会将新添加的元素直接放在 slot 槽位上（ 头插法 ），使新添加的元素在下次提取时可以被更快地访问。如果两个线程同时执行到 Entry<K, V> e = table[bucketIndex] 时，那么前一个线程的赋值就会被另一个覆盖掉。
 ```java
 void createEntry(int hash, K key, V value, int bucketIndex) {
     Entry<K, V> e = table[bucketIndex];
@@ -302,7 +302,7 @@ Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
 ```
 
 Step2：不同于 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中（ **@1** ）。
-接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位（ **@2** ）；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ **@3：e.hash & oldCap**，详情请见 1.7 和 1.8 的不同点这道面试题 ）。
+接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位（ **@2** ）；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ **@4：e.hash & oldCap**，详情请见 1.7 和 1.8 的不同点这道面试题 ）。
 ```java
 table = newTab; // @1
 if (oldTab != null) {
@@ -313,8 +313,8 @@ if (oldTab != null) {
             if (e.next == null)
                 newTab[e.hash & (newCap - 1)] = e; // @2
             else if (e instanceof TreeNode)
-                ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
-            else { // @3
+                ((TreeNode<K,V>)e).split(this, newTab, j, oldCap); // @3
+            else { // @4
                 Node<K,V> loHead = null, loTail = null;
                 Node<K,V> hiHead = null, hiTail = null;
                 Node<K,V> next;
@@ -344,6 +344,69 @@ if (oldTab != null) {
                     newTab[j + oldCap] = hiHead;
                 }
             }
+        }
+    }
+}
+```
+
+Step3：按理说切分红黑树是没必要单独拎出来作为一个步骤来讲，耐不住这个是我目前唯一一个能看得懂的红黑树操作，不讲可惜了！在正式分析 split() 方法前需要重温一下 TreeNode 的结构，其中 prev 是用来删除下一个节点用的，标记当前节点的前驱节点。
+```java
+static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+    TreeNode<K,V> parent;
+    TreeNode<K,V> left;
+    TreeNode<K,V> right;
+    TreeNode<K,V> prev;
+    boolean red;
+
+    // 省略了构造方法和成员方法
+}
+```
+
+和切分链表的操作类似，切分红黑树同样需要两对指针用于记录不需要移动的链表头部和尾部和需要移动的链表头部和尾部。接着开始遍历整棵红黑树，取出 e 的下一个节点后，先把它赋值为空方便 GC 回收，再将它的 hash 值和 oldCap 按位与判断在 newTab 中的位置是否需要移动。完整地遍历一遍后，如果 loHead 和 hiHead 各自指向的链表中元素个数小于等于 6 的话，则将原先的红黑树退化回链表；否则在 newTab 中重新构建一棵新的红黑树。
+```java
+final void split(HashMap<K,V> map, Node<K,V>[] tab, int index, int bit) {
+    TreeNode<K,V> b = this;
+    // Relink into lo and hi lists, preserving order
+    TreeNode<K,V> loHead = null, loTail = null;
+    TreeNode<K,V> hiHead = null, hiTail = null;
+    int lc = 0, hc = 0;
+    for (TreeNode<K,V> e = b, next; e != null; e = next) {
+        next = (TreeNode<K,V>)e.next;
+        e.next = null;
+        if ((e.hash & bit) == 0) {
+            if ((e.prev = loTail) == null)
+                loHead = e;
+            else
+                loTail.next = e;
+            loTail = e;
+            ++lc;
+        }
+        else {
+            if ((e.prev = hiTail) == null)
+                hiHead = e;
+            else
+                hiTail.next = e;
+            hiTail = e;
+            ++hc;
+        }
+    }
+
+    if (loHead != null) {
+        if (lc <= UNTREEIFY_THRESHOLD)
+            tab[index] = loHead.untreeify(map);
+        else {
+            tab[index] = loHead;
+            if (hiHead != null) // (else is already treeified)
+                loHead.treeify(tab);
+        }
+    }
+    if (hiHead != null) {
+        if (hc <= UNTREEIFY_THRESHOLD)
+            tab[index + bit] = hiHead.untreeify(map);
+        else {
+            tab[index + bit] = hiHead;
+            if (loHead != null)
+                hiHead.treeify(tab);
         }
     }
 }
