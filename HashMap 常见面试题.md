@@ -302,7 +302,8 @@ threshold = newThr;
 Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
 ```
 
-Step2：不同于 HashMap 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中。
+Step2：不同于 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中。
+接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ 详情请见 1.7 和 1.8 的不同点这道面试题 ）。
 ```java
 table = newTab;
 if (oldTab != null) {
