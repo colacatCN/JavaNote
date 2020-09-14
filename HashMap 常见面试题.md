@@ -413,4 +413,4 @@ final void split(HashMap<K,V> map, Node<K,V>[] tab, int index, int bit) {
 ```
 
 ## 分析一下 HashMap 1.7 的死链问题
-[HashMap 死链示意图](https://github.com/ColacatCN/MarkdownPhotos/blob/master/HashMap%20%E6%AD%BB%E9%93%BE%E7%A4%BA%E6%84%8F%E5%9B%BE.png)
+![HashMap 死链示意图](https://github.com/ColacatCN/MarkdownPhotos/blob/master/HashMap%20%E6%AD%BB%E9%93%BE%E7%A4%BA%E6%84%8F%E5%9B%BE.png)
