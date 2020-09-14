@@ -224,7 +224,7 @@ if ((tab = table) == null || (n = tab.length) == 0)
     n = (tab = resize()).length;
 ```
 
-Step 2：计算待插入元素的落槽位 i，如果 table[i] 为空，则将该元素插入落槽位。
+Step 2：计算待插入元素的落槽位 i，如果 table[i] 为空，则将该元素插入槽位。
 ```java
 if ((p = tab[i = (n - 1) & hash]) == null)
     tab[i] = newNode(hash, key, value, null);
@@ -245,7 +245,7 @@ else if (p instanceof TreeNode)
     e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
 ```
     
-3.3 如果槽位内的元素属于普通的 Node 类型，则遍历链表，同时利用 binCount 变量统计当前链表的长度。在遍历时如果链表中的元素和待插入元素的 hash 值相同，则用 newValue 覆盖 oldValue，并返回 oldValue；否则将会遍历到链表末尾，创建一个新的 Node 节点用于存放数据，并判断当前链表的长度是否满足树化的条件；
+3.3 如果槽位内的元素属于普通的 Node 类型，则遍历链表，同时利用 binCount 变量统计当前链表的长度。在遍历时如果链表中的元素和待插入元素的 hash 值相同，则用 newValue 覆盖 oldValue，并返回 oldValue；否则将会遍历到链表末尾，创建一个新的 Node 节点用于存放数据，并根据 binCount 的值判断当前链表的长度是否满足树化的条件；
 ```java
 for (int binCount = 0; ; ++binCount) {
     if ((e = p.next) == null) {
@@ -302,7 +302,7 @@ Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
 ```
 
 Step2：不同于 1.7 的做法，为了避免并发扩容带来的线程安全问题，1.8 在创建完 newTab 后直接将其引用赋值给了 table，然后再把 oldTab 中的元素逐步搬迁到 newTab 中（ **@1** ）。
-接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位（ **@2** ）；否则判断其数据类型，如果是 TreeNode 类型则交 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ **@4：e.hash & oldCap**，详情请见 1.7 和 1.8 的不同点这道面试题 ）。
+接着开始遍历 oldTab，如果槽位中的元素没有后继元素（ 它屁股后面没有挂着链表或红黑树 ），则根据 newCap 重新计算其在 newTab 中的落槽位（ **@2** ）；否则判断其数据类型，如果是 TreeNode 类型则交由 split() 方法来切分红黑树，如果是普通的 Node 类型，此时 1.8 的做法又有别于 1.7，它通过一种“独特”的方式将 oldTab 上的链表拆分成两条不同的链表挂在 newTab 上（ **@4：e.hash & oldCap**，详情请见 1.7 和 1.8 的不同点这道面试题 ）。
 ```java
 table = newTab; // @1
 if (oldTab != null) {
@@ -362,7 +362,7 @@ static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
 }
 ```
 
-和切分链表的操作类似，切分红黑树同样需要两对指针用于记录不需要移动的链表头部和尾部和需要移动的链表头部和尾部。接着开始遍历整棵红黑树，取出 e 的下一个节点后，先把它赋值为空方便 GC 回收，再将它的 hash 值和 oldCap 按位与判断在 newTab 中的位置是否需要移动。完整地遍历一遍后，如果 loHead 和 hiHead 各自指向的链表中元素个数小于等于 6 的话，则将原先的红黑树退化回链表；否则在 newTab 中重新构建一棵新的红黑树。
+和切分链表的操作类似，切分红黑树同样需要两对指针用于记录不需要移动的链表头部和尾部和需要移动的链表头部和尾部。接着开始遍历整棵红黑树，取出 e 的下一个节点后，先把它赋值为空方便 GC 回收，再将它的 hash 值和 oldCap 按位与判断在 newTab 中的位置是否需要移动。完整地遍历一遍后，如果 loHead 和 hiHead 各自指向的链表中元素个数小于等于 6 的话，则将原先的红黑树退化回链表；否则在 newTab 中重新构建出一棵新的红黑树。
 ```java
 final void split(HashMap<K,V> map, Node<K,V>[] tab, int index, int bit) {
     TreeNode<K,V> b = this;
