@@ -70,7 +70,7 @@ private void ensureExplicitCapacity(int minCapacity) {
 
 如果新数组的容量 newCapacity 小于传入的参数要求的最小容量 minCapacity，那么新数组的容量以传入的容量参数为准。
     
-* oldCapacity + (oldCapacity >> 1) 的值超过了 Integer.MAX_VALUE，那么得到的 newCaopacity 就会变为负数
+* oldCapacity + (oldCapacity >> 1) 的值超过了 Integer.MAX_VALUE，那么得到的 newCapacity 就会变为负数
     
 * 调用 addAll() 方法时会一口气插入 N 个元素，致使 minCapacity = size + numNew，旧数组即使扩容了 1.5 倍也不一定能满足需求
 
