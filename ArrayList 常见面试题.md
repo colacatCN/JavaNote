@@ -68,7 +68,11 @@ private void ensureExplicitCapacity(int minCapacity) {
 
 将 oldCapacity 带符号右移一位，相当于 oldCapacity / 2，因此执行完整行语句后得到 newCapacity = oldCapacity * 1.5。
 
-如果新数组的容量 newCapacity 小于传入的参数要求的最小容量 minCapacity，那么新数组的容量以传入的容量参数为准。（ 调用 addAll() 方法时会一口气插入 N 个元素，致使 minCapacity = size + numNew，旧数组即使扩容了 1.5 倍也不一定能满足需求 ）
+如果新数组的容量 newCapacity 小于传入的参数要求的最小容量 minCapacity，那么新数组的容量以传入的容量参数为准。
+    
+    * oldCapacity + (oldCapacity >> 1) 的值超过了 Integer.MAX_VALUE，那么得到的 newCaopacity 就会变为负数
+    
+    * 调用 addAll() 方法时会一口气插入 N 个元素，致使 minCapacity = size + numNew，旧数组即使扩容了 1.5 倍也不一定能满足需求
 
 如果新数组的容量 newCapacity 大于数组能容纳的最大元素个数 MAX_ARRAY_SIZE，那么再判断传入的参数 minCapacity 是否大于 MAX_ARRAY_SIZE。如果 minCapacity 同样大于 MAX_ARRAY_SIZE，那么 newCapacity 等于 Integer.MAX_VALUE，否者 newCapacity 等于 MAX_ARRAY_SIZE。
 ```java
