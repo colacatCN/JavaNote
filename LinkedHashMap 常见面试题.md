@@ -141,6 +141,29 @@ protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {
 
 当需要基于 LinkedHashMap 实现缓存时，可以通过覆写 removeEldestEntry() 方法实现自定义策略的 LRU 缓存。比如可以根据节点数量判断是否移除最近最少被访问的节点，或者根据节点的存活时间判断是否移除该节点。
 
+```java
+public class SimpleCache<K, V> extends LinkedHashMap<K, V> {
+
+    private static final int MAX_NODE_NUM = 100;
+
+    private int limit;
+
+    public SimpleCache() {
+        this(MAX_NODE_NUM);
+    }
+
+    public SimpleCache(int limit) {
+        super(limit, 0.75f, true);
+        this.limit = limit;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > limit;
+    }
+}
+```
+
 * afterNodeRemoval()
 
 ```java
