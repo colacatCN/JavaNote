@@ -69,3 +69,60 @@ TreeMap 使用的是**红黑树**的数据结构；而 1.8 及以后版本的 Ha
 **3. 去重的方式**
 
 HashMap 是使用 hashCode() 和 equals() 方法实现去重的。而 TreeMap 则是依靠 Comparator 或 Comparable 来实现基于 Key 的去重。如果 Comparator 不为 null，优先使用 Comparator 的 compare() 方法；如果为 null，则使用 Key 实现的自然排序 Comparable 接口的 compareTo() 方法。 
+
+## TreeMap put 流程分析
+
+```java
+public V put(K key, V value) {
+    Entry<K,V> t = root; // t 表示当前节点，先把 TreeMap 根节点的引用赋值给当前节点
+    if (t == null) {
+        compare(key, key); // type (and possibly null) check
+        
+        root = new Entry<>(key, value, null); // 如果当前节点为 null，说明为空树，那么新插入的节点直接就作为根节点。compare(key, key) 的意义是提前校验 Key 是否可以比较，即有没有指定的 Comparator 或 Key 有没有继承 Comparable 并覆写 compareTo() 方法，如果都没有则抛出 NPE
+        size = 1;
+        modCount++;
+        return null;
+    }
+    int cmp; // 用来接收比较的结果
+    Entry<K,V> parent;
+    // split comparator and comparable paths
+    Comparator<? super K> cpr = comparator; // 传入在构造方法中指定的 Comparator
+    if (cpr != null) { 
+        do { // 根据二叉排序树的特性，找到适合新节点的插入位置
+            parent = t; // 在进行下一轮循环前，保留父节点的位置
+            cmp = cpr.compare(key, t.key);
+            if (cmp < 0) // 如果比较的结果小于 0，则转向遍历当前节点的左子树
+                t = t.left;
+            else if (cmp > 0) // 如果比较的结果大于 0，则转向遍历当前节点的右子树
+                t = t.right;
+            else
+                return t.setValue(value); // 如果相等，则会粗暴地用新的值覆盖当前节点旧的值，并返回旧的值
+        } while (t != null); // 如果没有相等的 Key，会一直遍历到 NULL 节点
+    }
+    else { // 在没有指定 Comparator 的情况下，则调用自然排序的 Comparable 进行比较
+        if (key == null)
+            throw new NullPointerException();
+        @SuppressWarnings("unchecked")
+            Comparable<? super K> k = (Comparable<? super K>) key;
+        do {
+            parent = t;
+            cmp = k.compareTo(t.key);
+            if (cmp < 0)
+                t = t.left;
+            else if (cmp > 0)
+                t = t.right;
+            else
+                return t.setValue(value);
+        } while (t != null);
+    }
+    Entry<K,V> e = new Entry<>(key, value, parent); // 创建新的节点
+    if (cmp < 0) // 还记得之前的 parent 变量吗？如果在上面的遍历中没有遇到相等的 Key，则会把新插入的节点与 parent 变量保存的父节点进行比较。如果比较结果小于 0，则成为父节点的左孩子。
+        parent.left = e;
+    else
+        parent.right = e; // 如果比较结果大于 0，则成为父节点的右孩子。
+    fixAfterInsertion(e); // 还需要整棵红黑树进行重新涂色和旋转，以满足红黑树平衡的条件
+    size++;
+    modCount++; // 操作记录加 1
+    return null; // 成功插入新节点后，返回为 null
+}
+```
