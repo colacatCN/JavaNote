@@ -56,8 +56,16 @@ leftOf(parentOf(parentOf(x))) 或 rightOf(parentOf(parentOf(x)))：新插入的�
 
 ##  TreeMap 和 HashMap 的区别
 
-TreeMap 和 HashMap 都继承自 AbstractMap，同时 TreeMap 还额外实现了 NavigableMap 接口和 SortedMap 接口。
+**1. TreeMap 和 HashMap 都继承自 AbstractMap，同时 TreeMap 还额外实现了 NavigableMap 接口和 SortedMap 接口**
 
 * 实现 **NavigableMap** 接口让 TreeMap 有了对集合内元素的**搜索**能力。例如 firstEntry() 方法可以返回 Map 中包含最小 Key 的 Entry，tailMap() 方法可以返回 Map 中大于或等于指定 Key 的 Entry 集合（ 实现一致性 Hash 算法 ）。
 
 * 实现 **SortMap** 接口让 TreeMap 有了对集合内元素根据 Key 的**排序**能力。默认是按 Key 的升序排序，不过也可以通过指定排序的比较器自定义排序规则。
+
+**2. 数据结构**
+
+TreeMap 使用的是**红黑树**的数据结构；而 1.8 及以后版本的 HashMap 则使用的是**数组 + 单链表 + 红黑树**的数据结构。
+
+**3. 去重的方式**
+
+HashMap 是使用 hashCode() 和 equals() 方法实现去重的。而 TreeMap 则是依靠 Comparator 或 Comparable 来实现基于 Key 的去重。如果 Comparator 不为 null，优先使用 Comparator 的 compare() 方法；如果为 null，则使用 Key 实现的自然排序 Comparable 接口的 compareTo() 方法。 
