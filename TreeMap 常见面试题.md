@@ -70,7 +70,9 @@ TreeMap 使用的是**红黑树**的数据结构；而 1.8 及以后版本的 Ha
 
 HashMap 是使用 hashCode() 和 equals() 方法实现去重的。而 TreeMap 则是依靠 Comparator 或 Comparable 来实现基于 Key 的去重。如果 Comparator 不为 null，优先使用 Comparator 的 compare() 方法；如果为 null，则使用 Key 实现的自然排序 Comparable 接口的 compareTo() 方法。 
 
-## TreeMap put 流程分析
+## TreeMap 的 put 和 remove 流程分析
+
+### put 流程
 
 ```java
 public V put(K key, V value) {
@@ -116,13 +118,15 @@ public V put(K key, V value) {
         } while (t != null);
     }
     Entry<K,V> e = new Entry<>(key, value, parent); // 创建新的节点
-    if (cmp < 0) // 还记得之前的 parent 变量吗？如果在上面的遍历中没有遇到相等的 Key，则会把新插入的节点与 parent 变量保存的父节点进行比较。如果比较结果小于 0，则成为父节点的左孩子。
+    if (cmp < 0) // 还记得之前的 parent 变量吗？如果在上面的遍历中没有遇到相等的 Key，则会把新插入的节点与 parent 变量保存的父节点进行比较。如果比较的结果小于 0，则成为父节点的左孩子。
         parent.left = e;
     else
-        parent.right = e; // 如果比较结果大于 0，则成为父节点的右孩子。
-    fixAfterInsertion(e); // 还需要整棵红黑树进行重新涂色和旋转，以满足红黑树平衡的条件
+        parent.right = e; // 如果比较的结果大于 0，则成为父节点的右孩子。
+    fixAfterInsertion(e); // 还需要对整棵红黑树进行重新涂色和旋转，以满足红黑树平衡的条件
     size++;
     modCount++; // 操作记录加 1
     return null; // 成功插入新节点后，返回为 null
 }
 ```
+
+### remove 流程
