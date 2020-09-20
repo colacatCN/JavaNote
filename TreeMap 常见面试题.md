@@ -78,7 +78,7 @@ HashMap 是使用 hashCode() 和 equals() 方法实现去重的。而 TreeMap �
 public V put(K key, V value) {
     Entry<K,V> t = root; // t 表示当前节点，先把 TreeMap 根节点的引用赋值给当前节点
     if (t == null) {
-        compare(key, key); // type (and possibly null) check
+        compare(key, key);
         
         root = new Entry<>(key, value, null); // 如果当前节点为 null，说明为空树，那么新插入的节点直接就作为根节点。compare(key, key) 的意义是提前校验 Key 是否可以比较，即有没有指定的 Comparator 或 Key 有没有继承 Comparable 并覆写 compareTo() 方法，如果都没有则抛出 NPE
         size = 1;
@@ -130,3 +130,47 @@ public V put(K key, V value) {
 ```
 
 ### remove 流程
+
+```java
+private void deleteEntry(Entry<K,V> p) {
+    modCount++;
+    size--;
+
+    if (p.left != null && p.right != null) { // 如果待删除的节点同时存在左、右孩子，则获取其后继节点。将其 key 和 value 复制给引用 p 指向的节点的 key 和 value，并将引用 p 移动至后继节点。这样做的目的是，将同时拥有左、右孩子的节点的删除操作转换为对其后继节点的删除，减少平衡红黑树的次数
+        Entry<K,V> s = successor(p);
+        p.key = s.key;
+        p.value = s.value;
+        p = s;
+    }
+
+    Entry<K,V> replacement = (p.left != null ? p.left : p.right); // 现如今引用 p 已指向待删除节点的后继节点，判断该后继节点是否拥有左或右孩子（ 可以简单地理解为后继节点找个接盘侠 ）
+
+    if (replacement != null) { // 如果后继节点存在代替节点，则先进行代替
+        replacement.parent = p.parent; // 将代替节点的爹设置为后继节点的爹，简称爹的传递
+        if (p.parent == null)
+            root = replacement;
+        else if (p == p.parent.left) // 如果后继节点是其父亲节点的左孩子，则将父亲节点的左子树设置为代替节点
+            p.parent.left  = replacement;
+        else
+            p.parent.right = replacement; // 相反地，将父亲节点的右孩子设置为代替节点
+
+        p.left = p.right = p.parent = null; // 删除后继节点
+
+        if (p.color == BLACK) // 如果后继节点的颜色为黑，则还需要平衡红黑树
+            fixAfterDeletion(replacement);
+    } else if (p.parent == null) {
+        root = null;
+    } else { // 如果后继节点不存在代替节点，即此时后继节点为叶子节点，则不需要再进行代替操作。然后先平衡红黑树再删除后继节点
+        if (p.color == BLACK)
+            fixAfterDeletion(p);
+
+        if (p.parent != null) {
+            if (p == p.parent.left)
+                p.parent.left = null;
+            else if (p == p.parent.right)
+                p.parent.right = null;
+            p.parent = null;
+        }
+    }
+}
+```
