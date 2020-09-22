@@ -1,0 +1,162 @@
+# JVM 常见面试题
+
+## 类加载过程
+
+类加载是一个将 .class 字节码文件实例化成 Class 对象并进行相关初始化的过程。主要有三步：加载 ---> 链接 ---> 初始化，其中链接这一步又可以分为：验证 ---> 准备 ---> 解析。
+
+### 加载
+
+作为类加载过程的第一步，主要完成如下 3 件事情：
+
+1. 根据指定的全限定类名获取定义此类的二进制字节流
+
+2. 将字节流所代表的静态数据结构转换为方法区的运行时数据结构
+
+3. 在堆内存中生成一个代表该类的 Class 对象，作为方法区这些数据的访问入口
+
+### 链接
+
+验证：final 是否合规、类型是否正确、静态变量是否合理等
+
+准备：为静态变量分配内存并设定默认值
+
+解析：确保类与类之间相互引用的正确性，完成内存结构布局
+
+### 初始化
+
+初始化是类加载的最后一步，是执行类构造器 <clinit> () 方法的过程。
+
+对于初始化阶段，虚拟机严格规范了有且只有 5 种情况必须对类进行初始化：
+
+1. 当遇到 new、getstatic、putstatic 或 invokestatic 这 4 条字节码指令时，比如 new 一个类，读取一个静态字段(未被 final 修饰)、或调用一个类的静态方法时。
+    
+    * new：创建一个类的对象
+
+    * getstatic：访问类的静态变量（ 不是静态常量，静态常量会在链接的准备阶段被加载到运行时常量池中 ）
+
+    * putstatic：给类的静态变量赋值
+
+    * invokestatic：调用类的静态方法
+
+2. 使用 java.lang.reflect 包的方法对类进行反射调用时如Class.forname("...").newInstance()等等，如果类没初始化，需要触发其初始化。
+
+3. 初始化一个类，如果其父类还未初始化，则先触发该父类的初始化。
+
+4. 当虚拟机启动时，用户需要定义一个要执行的主类 (包含 main 方法的那个类)，虚拟机会先初始化这个类。
+
+5. MethodHandle和VarHandle可以看作是轻量级的反射调用机制，而要想使用这2个调用， 就必须先使用findStaticVarHandle来初始化要调用的类。
+
+6. 当一个接口中定义了JDK8新加入的默认方法（被default关键字修饰的接口方法）时，如果有这个接口的实现类发生了初始化，那该接口要在其之前被初始化。
+
+## 类加载器
+
+类加载器的作用就是根据指定的全限定类名将 .class 文件加载到 JVM 内存中并转换为对应的 Class 对象。
+
+* 启动类加载器（ Bootstrap ClassLoader ）：最顶层的加载类，由 C++ 实现，负责加载 %JAVA_HOME%\lib 目录下的 jar 包以及被 -Xbootclasspath 参数指定路径中的所有类。
+
+* 扩展类加载器（ Extension ClassLoader ）：负责加载 %JAVA_HOME%\lib\ext 目录下的 jar 包以及被系统变量 java.ext.dirs 所指定路径下的 jar 包。
+ 
+* 应用程序类加载器（ Application ClassLoader ）：负责加载用户类路径 classpath 目录下的所有 jar 包。
+
+### 什么是双亲委派模式？
+
+每一个类都有一个对应它的类加载器。在类加载的过程中，如果一个类加载器收到类加载的请求，它首先不会自己去尝试加载这个类，而是把这个请求委派给父类加载器完成。每个类加载器都是如此，只有当父类加载器在自己的搜索范围内找不到指定的类时，即抛出 ClassNotFoundException，子类加载器才会尝试自己去加载。
+
+```java
+protected Class<?> loadClass(String name, boolean resolve)
+    throws ClassNotFoundException
+{
+    synchronized (getClassLoadingLock(name)) {
+        Class<?> c = findLoadedClass(name); // 首先检查请求加载的类是否已经被加载过
+        if (c == null) { // 如果该类没有被加载过
+            long t0 = System.nanoTime();
+            try {
+                if (parent != null) { // 如果父类加载器不为 null，则调用其 loadClass() 方法尝试加载（ 递归 ）
+                    c = parent.loadClass(name, false);
+                } else { // 如果父类加载器为 null，说明溯源到了最顶层，使用启动类加载器 BootstrapClassLoader 尝试加载
+                    c = findBootstrapClassOrNull(name);
+                }
+            } catch (ClassNotFoundException e) { 
+                // 抛出异常，说明父类加载器无法完成加载请求
+            }
+
+            if (c == null) {
+                long t1 = System.nanoTime();
+                c = findClass(name); // 既然上面两位大佬都没加载成功，那么只能靠应用程序类加载器 Application ClassLoader 自己去加载了
+
+                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                sun.misc.PerfCounter.getFindClasses().increment();
+            }
+        }
+        if (resolve) {
+            resolveClass(c);
+        }
+        return c;
+    }
+}
+```
+
+### 为什么需要双亲委派模式？
+
+双亲委派模型保证了 Java 程序的稳定运行，可以避免类的重复加载。JVM 区分不同类的方式不仅仅根据全限定的类名，如果相同的 .class 文件被不同的类加载器加载后会产生两个不同的 Class 对象，同时也保证了 Java 核心的 API 不被篡改。
+
+如果没有使用双亲委派模型，而是放任每个类加载器去加载自己内容的话就会出现一些问题，比如编写一个名为 java.lang.Object 的类，那么程序执行的时候系统中就会出现多个不同的 Object 类。
+
+### 如何打破双亲委派模式？
+
+首先需要继承父类 ClassLoader，并覆写其成员方法 loadClass()；而自定义类加载器需要覆写的是 loadClass() 方法内部的 findClass() 方法。
+
+## JVM 内存模型（ 内存布局 ）
+
+1. 程序计数器：是一块较小的内存空间，可以看作是当前线程所执行的字节码的行号指示器。
+
+   * 字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制，如：顺序执行、选择、循环、异常处理。
+   
+   * 在多线程的情况下，程序计数器用于记录当前线程执行的位置，从而当线程被切换回来的时候能够知道该线程上次运行到哪儿了。
+
+2. 本地方法栈：虚拟机栈为虚拟机执行 Java 方法（ 也就是字节码 ）；而本地方法栈则为虚拟机执行 Native 方法。
+
+3. 虚拟机栈
+
+4. 堆
+
+## 什么情况下会发生栈内存溢出？
+
+* 虚拟机栈是线程私有的，它的生命周期与线程相同，每个方法在执行时都会创建一个栈帧，用来存储局部变量表，操作数栈，动态链接，方法出口等信息。
+
+* 如果线程请求的栈深度大于虚拟机所允许的最大深度，那么将抛出 StackOverflowError（ 方法的递归调用容易产生这种结果 ）。
+
+* 如果虚拟机栈支持动态扩展，并且扩展的动作已经尝试过了，但是无法申请到足够的内存去完成扩展，或者在创建线程的时候没有足够的内存去创建对应的虚拟机栈，那么将抛出一个 OutOfMemoryError（ 线程启动过多 ）。
+
+* 参数 -Xss 调整虚拟机栈的大小。
+
+## 堆内存为什么要分成新生代和老年代？新生代中为什么要分为 Eden 和 Survivor？
+
+**1. 共享内存区**
+
+   * 共享内存区 = 堆 + 元数据区
+
+   * 堆 = 新生代 + 老年代
+
+   * 新生代 = Eden + S0 + S1
+
+   * 元数据区 = 运行时常量池 + klass 类元信息 + 其他
+  
+**2. 基本配置参数**
+
+   * 新生代与老年代的比例默认为 1:2，可以通过参数 -XX:NewRatio 配置
+  
+   * Eden、S0 和 S1 的比例默认为 8:1:1，可以通过参数 –XX:SurvivorRatio 配置
+  
+   * 对象在 Survivor 区内最多被复制 15 次后将被晋升至老年代，可以通过参数 -XX:MaxTenuringThreshold 配置
+
+**3. 为什么要分成新生代和老年代？**
+
+因为有的对象寿命长，有的对象寿命短。应该将寿命短的对象单独存放在一个区，满足一定的条件后再将其移动至另外一个专门存放寿命较长的对象的区。这样方便在不同的区内采用不同的垃圾收集算法，寿命短的区清理频次高一点，寿命长的区清理频次低一点，能够提高 GC 的效率。
+
+**4. 新生代中为什么要分为 Eden 和 Survivor？**
+
+   * 如果没有 Survivor 区，Eden 区每进行一次 Minor GC，存活的对象就会被送到老年代。老年代很快就会被填满从而触发 Major GC。由于老年代的内存空间要远大于新生代，进行一次 Full GC 消耗的时间也要比 Minor GC 长得多，所以需要分为 Eden 区和 Survivor 区。Survivor 区存在的意义，就是减少被送到老年代对象的数量，进而减少发生 Full GC 的次数。Survivor 区的预筛选保证了只有经历 15 次 Minor GC 还能在新生代中存活的对象，才会被送到老年代。
+  
+   * 设置两个 Survivor 区最大的好处就是解决了碎片化问题。刚刚新建的对象在 Eden 中，经历一次 Minor GC 后，Eden 中的存活对象就会被移动到 S0 然后清空 Eden 区。等 Eden 区再满了，就再触发一次 Minor GC，此时会将 Eden 区和 S0 中的存活对象一并复制送入 S1。这个过程非常重要，因为这种复制算法保证了 S1 中来自 Eden 区和 S0 两部分的存活对象占用了连续的内存空间，从而避免了碎片化的发生。
