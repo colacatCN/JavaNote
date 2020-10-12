@@ -11,19 +11,23 @@
 ```java
 Map.Entry<K,V>
 
-    |
-    |
-    ↓
-
-Node<K,V> --- HashMap.Node
-    int hash  
-    K key
-    V value
-    Node<K,V> next
 
     |
     |
     ↓
+
+
+Node<K,V> --- HashMap.Node            Entry<K,V> --- TreeMap.Entry
+    int hash                               K key
+    K key                                  V value
+    V value                                Entry<K,V> left
+    Node<K,V> next                         Entry<K,V> right
+                                           Entry<K,V> parent
+                                           boolean color = BLACK
+    |
+    |
+    ↓
+
 
 Entry<K,V> --- LinkedHashMap.Entry
     int hash
@@ -33,9 +37,11 @@ Entry<K,V> --- LinkedHashMap.Entry
     Entry<K,V> before
     Entry<K,V> after
 
+
     |
     |
     ↓
+
 
 TreeNode<K,V> --- HashMap.TreeNode
     int hash
