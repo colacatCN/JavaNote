@@ -14,17 +14,17 @@
 
 **3. 是否支持快速随机访问**
 
-快速随机访问就是通过索引号快速地获取元素。ArrayList 支持；而 LinkedList 不支持元素的随机访问。
+快速随机访问就是通过索引号快速地获取元素。`ArrayList` 支持；而 `LinkedList` 不支持元素的随机访问。
 
 **4. 是否保证线程安全**
 
-ArrayList 和 LinkedList 都是不同步的，也就是无法保证线程安全；
+`ArrayList` 和 `LinkedList` 都是不同步的，也就是无法保证线程安全；
 
 **5. 内存空间占用**
 
-ArrayList 的空间浪费主要体现在数组的末尾会预留一定的容量空间，而 LinkedList 的空间花费则体现在它的每一个元素都需要消耗比 ArrayList 更多的空间，因为一个 Node 节点不仅要存放数据，还要存放直接后继和直接前驱。
+`ArrayList` 的空间浪费主要体现在数组的末尾会预留一定的容量空间，而 `LinkedList` 的空间花费则体现在它的每一个元素都需要消耗比 `ArrayList` 更多的空间，因为一个 Node 节点不仅要存放数据，还要存放它直接后继和直接前驱的内存地址。
 
-ArrayList 的成员变量 elementData 是被 transient 关键字所修饰，表明其并不会直接参与到序列化的过程中。ArrayList 通过重写 writeObject() 方法使它先调用 defaultWriteObject() 方法序列化那些非 transient 的成员变量，然后通过遍历 elementData 数组，将其中非 null 的元素一并加入序列化，这样一来不仅可以提高序列化的效率，还能够减少空间的开销。
+`ArrayList` 的成员变量 elementData 是被 transient 关键字所修饰，表明其并不会直接参与到序列化的过程中。`ArrayList` 通过重写 writeObject() 方法使它先调用 defaultWriteObject() 方法序列化那些非 transient 的成员变量，然后通过遍历 elementData 数组再将其中非空的元素加入序列化，这样一来不仅可以提高序列化的效率，还能够减少空间的开销。
 
 ## ArrayList 扩容机制
 
