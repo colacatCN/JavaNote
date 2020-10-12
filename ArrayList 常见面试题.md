@@ -41,7 +41,7 @@ public boolean add(E e) {
 
 **Step2：ensureCapacityInternal() 方法**
 
-当准备插入第 1 个元素时，此时 minCapacity 等于 size + 1 又等于 1，在 Math.max() 方法比较后，minCapacity 变为10。
+当准备插入第 1 个元素时，此时 minCapacity 等于 size + 1 又等于 1，在 Math.max() 方法比较后，minCapacity 变为 10。
 ```java
 private static int calculateCapacity(Object[] elementData, int minCapacity) {
     if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
