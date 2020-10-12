@@ -61,7 +61,7 @@ TreeNode<K,V> --- HashMap.TreeNode
 
 ### 核心参数
 
-* accessOrder：该字段用来控制是否需要将被访问的节点移动到双向链表的末尾。默认值为 false，即使用双向链表节点插入顺序来排序。
+* `accessOrder`：该字段用来控制是否需要将被访问的节点移动到双向链表的末尾。默认值为 false，即使用双向链表节点插入顺序来排序。
 
 ### 建立双向链表
 
@@ -91,7 +91,7 @@ private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
 
 ### after 方法三兄弟
 
-* afterNodeAccess()：LinkedHashMap 覆写了父类的 get() 方法，在访问完节点后根据 accessOrder 的值判断是否需要将该节点移动到双向链表的末尾。
+* `afterNodeAccess()`：LinkedHashMap 覆写了父类的 get() 方法，在访问完节点后根据 accessOrder 的值判断是否需要将该节点移动到双向链表的末尾。
 
 ```java
 public V get(Object key) {
@@ -129,7 +129,7 @@ void afterNodeAccess(Node<K,V> e) {
 }
 ```
 
-* afterNodeInsertion()：LinkedHashMap 在调用父类的 putVal() 完成节点的插入时，判断是否需要删除最近最少访问的节点，删除条件则是由 removeEldestEntry() 来决定。由于设置了 accessOrder 的值为 true，意味着任一节点被访问后都会被移动到双向链表的末尾，因此头节点 header 就是最近最少访问的节点。在父类的 removeNode() 方法内部会回调 afterNodeRemoval() 方法来调整该双向链表。
+* `afterNodeInsertion()`：LinkedHashMap 在调用父类的 putVal() 完成节点的插入时，判断是否需要删除最近最少访问的节点，删除条件则是由 removeEldestEntry() 来决定。由于设置了 accessOrder 的值为 true，意味着任一节点被访问后都会被移动到双向链表的末尾，因此头节点 header 就是最近最少访问的节点。在父类的 removeNode() 方法内部会回调 afterNodeRemoval() 方法来调整该双向链表。
 
 ```java
 void afterNodeInsertion(boolean evict) {
@@ -170,7 +170,7 @@ public class SimpleCache<K, V> extends LinkedHashMap<K, V> {
 }
 ```
 
-* afterNodeRemoval()
+* `afterNodeRemoval()`
 
 ```java
 void afterNodeRemoval(Node<K,V> e) {
