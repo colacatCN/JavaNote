@@ -67,7 +67,7 @@ TreeNode<K,V> --- HashMap.TreeNode
 
 双向链表的建立过程是在第一次插入节点时开始的。初始情况下让 LinkedHashMap 的 head 和 tail 指针同时指向新创建的节点，这样双向链表的骨架就算是建立起来了。之后随着不断有新的节点被插入到 LinkedHashMap 中，将新节点直接接在 tail 指针所指向的节点后面即可。
 
-LinkedHashMap 并没有选择直接覆写父类 HashMap 的 put() 方法，而是直接使用了父类的实现，通过覆写 newNode() 方法实现插入不同类型的数据。在创建新节点的同时把该节点移动到双向链表的末尾。
+LinkedHashMap 并没有覆写父类 HashMap 的 putVal() 方法，而是选择直接使用它的实现，通过覆写 newNode() 方法实现插入不同类型的数据。在创建新节点的同时把该节点移动到双向链表的末尾。
 
 ```java
 Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
