@@ -16,17 +16,17 @@
 
 ### 约定俗成的叫法
 
-x：新插入的节点（ 也可以叫当前节点 ）
+`x`：新插入的节点（ 也可以叫当前节点 ）
 
-parentOf(x)：新插入的节点的**父亲节点**
+`parentOf(x)`：新插入的节点的**父亲节点**
 
-parentOf(parentOf(x))：新插入的节点的**爷爷节点**
+`parentOf(parentOf(x))`：新插入的节点的**爷爷节点**
 
-leftOf(parentOf(parentOf(x))) 或 rightOf(parentOf(parentOf(x)))：新插入的节点的**叔叔节点**
+`leftOf(parentOf(parentOf(x)))` 或 `rightOf(parentOf(parentOf(x)))`：新插入的节点的**叔叔节点**
 
 ### 插入公式
 
-循环的跳出条件 while (x != null && x != root && x.parent.color == RED) {...}
+循环的跳出条件 `while (x != null && x != root && x.parent.color == RED) {...}`
 
 如果新插入节点的父亲节点是爷爷节点的左子树：
 
