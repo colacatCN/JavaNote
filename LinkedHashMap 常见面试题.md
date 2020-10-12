@@ -129,7 +129,7 @@ void afterNodeAccess(Node<K,V> e) {
 }
 ```
 
-* `afterNodeInsertion()`：LinkedHashMap 在调用父类的 putVal() 完成节点的插入时，判断是否需要删除最近最少访问的节点，删除条件则是由 removeEldestEntry() 来决定。由于设置了 accessOrder 的值为 true，意味着任一节点被访问后都会被移动到双向链表的末尾，因此头节点 header 就是最近最少访问的节点。在父类的 removeNode() 方法内部会回调 afterNodeRemoval() 方法来调整该双向链表。
+* `afterNodeInsertion()`：LinkedHashMap 在调用父类的 putVal() 完成节点的插入时，判断是否需要删除最近最少访问的节点，删除条件则是由 removeEldestEntry() 来决定。由于设置了 accessOrder 的值为 true，意味着任一节点被访问后都会被移动到双向链表的末尾，因此头节点 header 就是最近最少访问的节点。在父类的 removeNode() 方法内部会回调 LinkedHashMap 的 afterNodeRemoval() 方法来调整双向链表。
 
 ```java
 void afterNodeInsertion(boolean evict) {
@@ -145,7 +145,7 @@ protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {
 }
 ```
 
-当需要基于 LinkedHashMap 实现缓存时，可以通过覆写 removeEldestEntry() 方法实现自定义策略的 LRU 缓存。比如可以根据节点数量判断是否移除最近最少被访问的节点，或者根据节点的存活时间判断是否移除该节点。
+当需要基于 LinkedHashMap 实现缓存时，可以通过覆写 removeEldestEntry() 方法实现自定义策略的 LRU 缓存。比如可以根据节点数量判断是否移除最近最少被访问的节点，或者根据节点的存活时间判断是否移除该节点（ 大致思路是通过实现 Map.Entry 接口或者继承 HashMap.Node 类来自定义一个节点类型，在其中新增一个字段 createTime 用于记录该节点被创建的时间 ）。
 
 ```java
 public class SimpleCache<K, V> extends LinkedHashMap<K, V> {
