@@ -32,9 +32,9 @@
 
 * 启动类加载器（ Bootstrap ClassLoader ）：最顶层的加载器，由 C++ 实现，负责加载 Java 的核心类库，例如：%JRE_HOME%\lib\rt.jar、%JRE_HOME%\lib\resources.jar、sun.boot.class.path 路径下的 jar 包。
 
-* 扩展类加载器（ Extension ClassLoader ）：负责加载 %JAVA_HOME%\lib\ext 目录下的 jar 包以及被系统变量 java.ext.dirs 所指定路径下的 jar 包。
+* 扩展类加载器（ Extension ClassLoader ）：负责加载 %JRE_HOME%\lib\ext 目录下的 jar 包以及被系统变量 java.ext.dirs 所指定路径下的 jar 包。
  
-* 应用程序类加载器（ Application ClassLoader ）：负责加载用户类路径 classpath 目录下的所有 jar 包。
+* 应用程序类加载器（ Application ClassLoader ）：负责加载用户类路径 classpath 目录下所有的 jar 包。
 
 ### 什么是双亲委派模式？
 
