@@ -30,7 +30,7 @@
 
 类加载器的作用就是根据指定的全限定类名将 .class 字节码文件加载到 JVM 中并实例化成对应的 Class 对象。
 
-* 启动类加载器（ Bootstrap ClassLoader ）：最顶层的加载器，由 C++ 实现，负责加载 %JAVA_HOME%\lib 目录下的 jar 包以及被 -Xbootclasspath 参数指定路径中的所有类。
+* 启动类加载器（ Bootstrap ClassLoader ）：最顶层的加载器，由 C++ 实现，负责加载 Java 的核心类库，例如：%JRE_HOME%\lib\rt.jar、%JRE_HOME%\lib\resources.jar、sun.boot.class.path 路径下的 jar 包。
 
 * 扩展类加载器（ Extension ClassLoader ）：负责加载 %JAVA_HOME%\lib\ext 目录下的 jar 包以及被系统变量 java.ext.dirs 所指定路径下的 jar 包。
  
