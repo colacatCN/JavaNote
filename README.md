@@ -15,3 +15,7 @@
 [TreeMap 常见面试题](https://github.com/ColacatCN/JavaNote/blob/master/TreeMap%20%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98.md)
 
 [JVM 常见面试题](https://github.com/ColacatCN/JavaNote/blob/master/JVM%20%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98.md)
+
+[线程池保姆级教程](https://github.com/ColacatCN/JavaNote/blob/master/%E7%BA%BF%E7%A8%8B%E6%B1%A0%E4%BF%9D%E5%A7%86%E7%BA%A7%E6%95%99%E7%A8%8B.md)
+
+[设计模式](https://github.com/ColacatCN/JavaNote/blob/master/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F.md)
