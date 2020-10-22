@@ -104,7 +104,7 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 ## 如何在旧表的基础上创建新的主键？
 
-1. 删除旧主键的 `AUTO_INCREATMENT` 参数；
+1. 如果旧主键是包含 `AUTO_INCREAMENT` 参数，则需要先删除该配置；
 
 > mysql > ALTER TABLE student MODIFY COLUMN `uuid` BIGINT NOT NULL;
 
@@ -116,4 +116,4 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 3. 新增主键
 
-> mysql > ALTER TABLE student ADD COLUMN `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST;
+> mysql > ALTER TABLE student ADD COLUMN `id` INT NOT NULL AUTO_INCREAMENT PRIMARY KEY FIRST;
