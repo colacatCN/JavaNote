@@ -95,3 +95,12 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
   * Using filesort：表示 MySQL 服务层需要对存储引擎返回的结果集进行外部排序，不能通过索引顺序达到排序的效果。
   
   * Using index condition：表示通过**索引下推**提前过滤了一部分数据，减少了回表的次数。
+  
+## 你自己使用mysql中遇到过乱码问题没有，如何解决的，产生原因是什么？
+
+1. 在项目工程中检查数据库连接的配置参数中是否指定了编码格式 `characterEncoding=UTF-8`；
+
+2. 通过命令 `show variables like 'char%';` 检查 MySQL 数据库的 `字符集` 格式是 `utf8`。如果不是的话，就在 my.ini 配置文件中分别为 `client` 和 `mysqld` 设置 `default-character-set=utf8` 和 `character-set-server=utf8`。
+
+
+
