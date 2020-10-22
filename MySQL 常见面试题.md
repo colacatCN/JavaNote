@@ -102,5 +102,18 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 2. 通过命令 `show variables like 'char%';` 检查 MySQL 数据库的 `字符集` 格式是 `utf8`。如果不是的话，就在 my.ini 配置文件中分别为 `client` 和 `mysqld` 设置 `default-character-set=utf8` 和 `character-set-server=utf8`。
 
+## 如何在旧表的基础上创建新的主键？
 
+1. 删除旧主键的 `AUTO_INCREATMENT` 参数；
 
+> mysql > ALTER TABLE student MODIFY COLUMN `uuid` BIGINT NOT NULL;
+
+2. 删除旧主键
+
+> mysql > ALTER TABLE student DROP PRIMARY KEY;
+
+> mysql > ALTER TABLE student DROP COLUMN `uuid`;
+
+3. 新增主键
+
+> mysql > ALTER TABLE student ADD COLUMN `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST;
