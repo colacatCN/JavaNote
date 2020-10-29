@@ -210,7 +210,7 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 ### ReadView
 
-隔离级别 READ UNCOMMITED 在读取行记录时不做任何保护，SERIALIZABLE 在读写行记录时通过表锁实现串行化处理。而 READ COMMITED 和 REPATABLE READ 则需要借助版本链和 ReadView 来实现一致性非锁定读，核心问题是如何判断版本链中哪个版本的快照对于当前事务是可见的？ReadView 中有四个比较重要的概念：
+隔离级别 READ UNCOMMITTED 在读取行记录时不做任何保护，SERIALIZABLE 在读写行记录时通过表锁实现串行化处理。而 READ COMMITTED 和 REPEATABLE READ 则需要借助版本链和 ReadView 来实现一致性非锁定读，核心问题是如何判断版本链中哪个版本的快照对于当前事务是可见的？ReadView 中有四个比较重要的概念：
 
 * `m_ids`：表示在生成 ReadView 时，当前系统中活跃的事务 id 列表。
 
@@ -219,4 +219,23 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 * `max_trx_id`：表示在生成 ReadView 时，当前系统中应该分配给下一个事务的 id。
 
 * `creator_trx_id`：表示生成 ReadView 的事务 id。
+
+#### 生成 ReadView 的时机
+
+READ COMMITTED 是在事务执行的过程，每调用一次 SELECT 语句就会生成一个 ReadView；而 REPEATABLE READ 只在事务执行前生成一个 ReadView，后续的查询操作都会复用该 ReadView。
+
+#### 如何通过 ReadView 判断行记录的某个版本是否对当前事务可见？
+
+1. 如果版本链中第一个被访问版本的 `DB_TRX_ID` 与 ReadView 中的 `creator_trx_id` 相同，说明当前事务正在访问自己修改过的行记录，允许其访问；
+
+2. 如果版本链中第一个被访问版本的 `DB_TRX_ID` 小于 ReadView 中的 `min_trx_id`，说明当前事务在生成 ReadView 之前修改该条行记录的事务就已经提交了，同样允许其访问。
+
+3. 如果版本链中第一个被访问版本的 `DB_TRX_ID` 大于 ReadView 中的 `max_trx_id`，说明当前事务在生成 ReadView 之后还有其他事务在修改该条行记录，不允许其访问。此时需要遍历版本链中上一条 `update undo log`，继续根据它的 `DB_TRX_ID` 判断可见性。
+
+4. 如果版本链中第一个被访问版本的 `DB_TRX_ID` 介于 ReadView 中的 `min_trx_id` 和 `max_trx_id` 之间，就需要判断 `DB_TRX_ID` 是不是在 `m_ids` 列表中？
+
+   4.1 如果在：说明当前事务在生成 ReadView 时生成该版本的事务还是活跃的，不允许其访问。此时需要遍历版本链中上一条 `update undo log`，继续根据它的 `DB_TRX_ID` 判断可见性。
+ 
+   4.2 如果不在：说明当前事务在生成 ReadView 时生成该版本的事务已经提交，允许其访问。
+
 
