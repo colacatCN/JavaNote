@@ -197,3 +197,26 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 8. 尽量使用联合索引，不要新建索引
 
 9. 遵循最佳左前缀原则
+
+## MySQL 一致性非锁定读
+
+### 版本链
+
+在 InnoDb 存储引擎中主键索引的数据域存储着行记录，每条行记录的末尾都包含两个隐藏的字段：`DB_TRX_ID` 和 `DB_ROLL_PTR`。
+
+* `DB_TRX_ID`：当修改某条行记录时，都会把相应的事务 id 赋值给 trx_id 字段。
+
+* `DB_ROLL_PTR`：当读取某条行记录时，可以通过这个指针找到该条行记录在读取前的修改信息。
+
+### ReadView
+
+隔离级别 READ UNCOMMITED 在读取行记录时不做任何保护，SERIALIZABLE 在读写行记录时通过表锁实现串行化处理。而 READ COMMITED 和 REPATABLE READ 则需要借助版本链和 ReadView 来实现一致性非锁定读，核心问题是如何判断版本链中哪个版本的快照对于当前事务是可见的？ReadView 中有四个比较重要的概念：
+
+* `m_ids`：表示在生成 ReadView 时，当前系统中活跃的事务 id 列表。
+
+* `min_trx_id`：表示在生成 ReadView 时，当前系统中活跃的事务 id 列表里最小的事务 id。
+
+* `max_trx_id`：表示在生成 ReadView 时，当前系统中应该分配给下一个事务的 id。
+
+* `creator_trx_id`：表示生成 ReadView 的事务 id。
+
