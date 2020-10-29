@@ -208,7 +208,15 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 * `DB_ROLL_PTR`：当读取某条行记录时，可以通过这个指针找到该条行记录在读取前的修改信息。
 
-事务 A 的操作过程为：对 DB_ROW_ID = 1 的这行记录加排他锁把该行原本的值拷贝到 undo log 中，DB_TRX_ID 和 DB_ROLL_PTR 都不动修改该行的值这时产生一个新版本，更新 DATA_TRX_ID 为修改记录的事务 ID，将 DATA_ROLL_PTR 指向刚刚拷贝到 undo log 链中的旧版本记录，这样就能通过 DB_ROLL_PTR 找到这条记录的历史版本。如果对同一行记录执行连续的 UPDATE，Undo Log 会组成一个链表，遍历这个链表可以看到这条记录的变迁记录 redo log，包括 undo log 中的修改
+生成版本链的过程：
+
+1. 先对主键或 `DB_ROW_ID` 所在的行记录加上排他锁；
+
+2. 再把该行原本的值拷贝到 undo log 中，`DB_TRX_ID` 和 `DB_ROLL_PTR` 都不动；
+
+3. 修改该行的值从而产生一个新的版本，更新 `DATA_TRX_ID` 为修改该条行记录的事务 id，同时将 `DATA_ROLL_PTR` 指针指向刚刚拷贝到 undo log 链中的旧版本记录。这样就能通过 `DB_ROLL_PTR` 指针找到这条记录的历史版本。如果对同一行记录执行连续的 UPDATE，Undo Log 会组成一个链表，遍历这个链表可以看到这条记录的变迁。
+
+4. 记录 redo log，包括 undo log 中的修改
 
 ### ReadView
 
@@ -239,5 +247,3 @@ READ COMMITTED 是在事务执行的过程，每调用一次 SELECT 语句就会
    4.1 如果在：说明当前事务在生成 ReadView 时生成该版本的事务还是活跃的，不允许其访问。此时需要遍历版本链中上一条 `update undo log`，继续根据它的 `DB_TRX_ID` 判断可见性。
  
    4.2 如果不在：说明当前事务在生成 ReadView 时生成该版本的事务已经提交，允许其访问。
-
-
