@@ -208,6 +208,8 @@ InnoDB 聚簇索引的叶子节点存储行数据，因此 InnoDB 必须要有�
 
 * `DB_ROLL_PTR`：当读取某条行记录时，可以通过这个指针找到该条行记录在读取前的修改信息。
 
+事务 A 的操作过程为：对 DB_ROW_ID = 1 的这行记录加排他锁把该行原本的值拷贝到 undo log 中，DB_TRX_ID 和 DB_ROLL_PTR 都不动修改该行的值这时产生一个新版本，更新 DATA_TRX_ID 为修改记录的事务 ID，将 DATA_ROLL_PTR 指向刚刚拷贝到 undo log 链中的旧版本记录，这样就能通过 DB_ROLL_PTR 找到这条记录的历史版本。如果对同一行记录执行连续的 UPDATE，Undo Log 会组成一个链表，遍历这个链表可以看到这条记录的变迁记录 redo log，包括 undo log 中的修改
+
 ### ReadView
 
 隔离级别 READ UNCOMMITTED 在读取行记录时不做任何保护，SERIALIZABLE 在读写行记录时通过表锁实现串行化处理。而 READ COMMITTED 和 REPEATABLE READ 则需要借助版本链和 ReadView 来实现一致性非锁定读，核心问题是如何判断版本链中哪个版本的快照对于当前事务是可见的？ReadView 中有四个比较重要的概念：
