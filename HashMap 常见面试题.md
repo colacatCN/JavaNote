@@ -62,7 +62,7 @@ if ((tab = table) == null || (n = tab.length) == 0)
 if (++size > threshold)
     resize();
 ```
-* 单链表的长度达到 8 但整体元素的个数小于 64
+* 单链表的长度达到 8 但 table 的容量小于 64
 ```java
 if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
     resize();
