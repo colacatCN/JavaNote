@@ -28,3 +28,7 @@ protected Object getEarlyBeanReference(String beanName, RootBeanDefinition mbd, 
     return exposedObject;
 }
 ```
+
+## 构造器的循环依赖问题
+
+Spring 解决循环依赖依靠的是 Bean 的“中间态”这个概念，而这个中间态指的是已经实例化，但还没初始化的状态。实例化的过程又是通过构造器去创建的，如果 A 还没创建出来，又怎么可能提前曝光到三级缓存中，所以构造器的循环依赖问题无法解决。
